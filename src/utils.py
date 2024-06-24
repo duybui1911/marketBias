@@ -9,6 +9,8 @@ import os
 import heapq
 import statsmodels.api as sm
 from statsmodels.formula.api import ols
+from tqdm import tqdm
+import matplotlib.pyplot as plt
 
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 BASE_DIR = os.path.dirname(PROJECT_ROOT)
@@ -20,6 +22,22 @@ OUTPUT_DIR = os.path.join(BASE_DIR, "result/")
 for DIR in [DATA_DIR, MODEL_DIR, OUTPUT_DIR]:
     if not os.path.exists(DIR):
         os.makedirs(DIR)
+
+
+def plot_loss(train_loss, valid_loss, model_name):
+    epochs = len(train_loss)
+    # Plot the convergence speed
+    # Plotting
+    plt.figure(figsize=(10, 5))
+    plt.plot(range(0, epochs), train_loss, 'r-', label='valid_loss')
+    plt.plot(range(0, epochs), valid_loss, 'b-', label='valid_loss')
+    
+    plt.title('Train loss và valid loss trong quá trình training model.')
+    plt.xlim(-10, epochs+5)
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.legend()
+    plt.savefig(model_name + '.png')
 
 
 class Model(object):
@@ -80,6 +98,8 @@ class Model(object):
         print("start training "+MODEL_NAME+" ...")
         sys.stdout.flush()
         config = tf.ConfigProto()
+        loss_training = []
+        loss_valid = []
         with tf.Graph().as_default(), tf.Session(config=config) as session:
 
             variables, scores, losses, errors, optimizers = self.model_constructor()
@@ -91,12 +111,12 @@ class Model(object):
             _loss_vali_old = 1e10
             n_noprogress = 0
 
-            for epoch in range(1, EPOCHS):
+            for epoch in tqdm(range(1, EPOCHS)):
                 _count, _count_sample = 0, 0
                 _loss_train = [0 for _ in range(len(losses))]
 
-                print("epoch: ", epoch)
-                print("=== current batch: ", end="")
+                # print("epoch: ", epoch)
+                # print("=== current batch: ", end="")
                 for _vars in self.next_train_batch(BATCH_SIZE):
                     feed = dict(zip(variables, _vars))
 
@@ -110,7 +130,7 @@ class Model(object):
                     if _count % 500 == 0:
                         print(int(_count), end=", ")
                         sys.stdout.flush()
-                print("complete!")
+                # print("complete!")
 
                 for _i in range(len(_loss_train)):
                     _loss_train[_i] /= _count_sample
@@ -118,11 +138,13 @@ class Model(object):
                 if _loss_train[0] < _loss_train_min:
                     _loss_train_min = _loss_train[0]
 
-                print("=== training: primary loss: {:.4f}, min loss: {:.4f}".format(
-                    _loss_train[0], _loss_train_min), end=";  ")
-                for _i, _l in enumerate(_loss_train[1:]):
-                    print(" aux_loss"+str(_i)+": {:.4f}".format(_l), end="")
-                print("")
+                # print("=== training: primary loss: {:.4f}, min loss: {:.4f}".format(
+                    # _loss_train[0], _loss_train_min), end=";  ")
+                loss_training.append(_loss_train[0])
+                
+                # for _i, _l in enumerate(_loss_train[1:]):
+                #     print(" aux_loss"+str(_i)+": {:.4f}".format(_l), end="")
+                # print("")
 
                 _count, _count_sample = 0, 0
                 _loss_vali = [0 for _ in range(len(losses))]
@@ -148,13 +170,14 @@ class Model(object):
                     n_noprogress += 1
                 _loss_vali_old = _loss_vali[0]
 
-                print("=== validation: primary loss: {:.4f}, min loss: {:.4f}".format(
-                    _loss_vali[0], _loss_vali_min), end=";  ")
-                for _i, _l in enumerate(_loss_vali[1:]):
-                    print(" aux_loss"+str(_i)+": {:.4f}".format(_l), end="")
-                print("")
+                # print("=== validation: primary loss: {:.4f}, min loss: {:.4f}".format(
+                #     _loss_vali[0], _loss_vali_min), end=";  ")
+                loss_valid.append(_loss_vali[0])
+                # for _i, _l in enumerate(_loss_vali[1:]):
+                #     print(" aux_loss"+str(_i)+": {:.4f}".format(_l), end="")
+                # print("")
 
-                print("=== #no progress: ", n_noprogress)
+                # print("=== #no progress: ", n_noprogress)
                 sys.stdout.flush()
 
                 if n_noprogress > max_noprogress:
@@ -162,6 +185,7 @@ class Model(object):
             saver.restore(session, os.path.join(
                 MODEL_DIR, self.MODEL_NAME + ".model.ckpt"))
         print("done!")
+        plot_loss(loss_training, loss_valid, MODEL_NAME)
         sys.stdout.flush()
 
     def batch(self, dataInput, BATCH_SIZE):
