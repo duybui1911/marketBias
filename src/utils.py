@@ -29,7 +29,7 @@ def plot_loss(train_loss, valid_loss, model_name):
     # Plot the convergence speed
     # Plotting
     plt.figure(figsize=(10, 5))
-    plt.plot(range(0, epochs), train_loss, 'r-', label='valid_loss')
+    plt.plot(range(0, epochs), train_loss, 'r-', label='train_loss')
     plt.plot(range(0, epochs), valid_loss, 'b-', label='valid_loss')
     
     plt.title('Train loss và valid loss trong quá trình training model.')
