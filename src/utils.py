@@ -33,7 +33,7 @@ def plot_loss(train_loss, valid_loss, model_name):
     plt.plot(range(0, epochs), valid_loss, 'b-', label='valid_loss')
     
     plt.title('Train loss và valid loss trong quá trình training model.')
-    plt.xlim(-10, epochs+5)
+    plt.xlim(-2, epochs+5)
     plt.xlabel('Epoch')
     plt.ylabel('Loss')
     plt.legend()
